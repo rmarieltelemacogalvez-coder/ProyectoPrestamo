@@ -5,73 +5,108 @@ namespace Proyectoprestamo
 {
     class Program
     {
+        static decimal monto;
+        static decimal tasaAnual;
+        static int plazo;
+
         static void Main(string[] args)
         {
-            // Título
+            MostrarTitulo();
+
+            PedirDatos();
+
+            if (!DatosValidos())
+                return;
+
+            decimal tasaMensual = ObtenerTasaMensual();
+            decimal cuota = CalcularCuota(tasaMensual);
+
+            var tabla = CrearTabla(tasaMensual, cuota);
+
+            MostrarTabla(tabla);
+        }
+
+        static void MostrarTitulo()
+        {
             AnsiConsole.Write(
-                new FigletText("Tabla de de prestamo")
+                new FigletText("Prestamo")
                 .Color(Color.Green)
                 .Centered());
+        }
 
-            // Solicitar datos
-            decimal monto = AnsiConsole.Ask<decimal>("\n[yellow]Digite el monto del préstamo:[/]");
-            decimal tasaAnual = AnsiConsole.Ask<decimal>("[yellow]Digite la tasa de interés anual (%):[/]");
-            int plazo = AnsiConsole.Ask<int>("[yellow]Digite la cantidad de meses a pagar:[/]");
+        static void PedirDatos()
+        {
+            monto = AnsiConsole.Ask<decimal>("\nIngrese el monto del préstamo:");
+            tasaAnual = AnsiConsole.Ask<decimal>("Ingrese la tasa anual (%):");
+            plazo = AnsiConsole.Ask<int>("Ingrese la cantidad de meses:");
+        }
 
-            // Validación
+        static bool DatosValidos()
+        {
             if (monto <= 0 || tasaAnual <= 0 || plazo <= 0)
             {
-                AnsiConsole.MarkupLine("\n[red]Error: Todos los valores deben ser mayores que cero.[/]");
-                return;
+                AnsiConsole.MarkupLine("[red]Los valores deben ser mayores que cero.[/]");
+                return false;
             }
+            return true;
+        }
 
-            // Convertir tasa anual a mensual
-            decimal tasaMensual = (tasaAnual / 100) / 12;
+        static decimal ObtenerTasaMensual()
+        {
+            return (tasaAnual / 100) / 12;
+        }
 
-            // Calcular cuota mensual (fórmula correcta)
-            decimal potencia = (decimal)Math.Pow((double)(1 + tasaMensual), plazo);
-            decimal cuota = monto * (tasaMensual * potencia) / (potencia - 1);
+        static decimal CalcularCuota(decimal tasaMensual)
+        {
+            decimal factor = (decimal)Math.Pow((double)(1 + tasaMensual), plazo);
+            return monto * (tasaMensual * factor) / (factor - 1);
+        }
 
-            decimal saldoPendiente = monto;
+        static Table CrearTabla(decimal tasaMensual, decimal cuota)
+        {
+            decimal saldo = monto;
 
-            // Crear tabla
             var tabla = new Table();
             tabla.Border(TableBorder.Rounded);
+
             tabla.AddColumn("Mes");
             tabla.AddColumn("Cuota");
             tabla.AddColumn("Interés");
             tabla.AddColumn("Capital");
             tabla.AddColumn("Saldo");
 
-            for (int mes = 1; mes <= plazo; mes++)
+            for (int i = 1; i <= plazo; i++)
             {
-                decimal interes = saldoPendiente * tasaMensual;
-                decimal pagoCapital = cuota - interes;
+                decimal interes = saldo * tasaMensual;
+                decimal capital = cuota - interes;
 
-                // Ajuste en el último mes
-                if (mes == plazo)
+                if (i == plazo)
                 {
-                    pagoCapital = saldoPendiente;
-                    cuota = interes + pagoCapital;
+                    capital = saldo;
+                    cuota = interes + capital;
                 }
 
-                saldoPendiente -= pagoCapital;
+                saldo -= capital;
 
-                if (saldoPendiente < 0)
-                    saldoPendiente = 0;
+                if (saldo < 0)
+                    saldo = 0;
 
                 tabla.AddRow(
-                    mes.ToString(),
+                    i.ToString(),
                     cuota.ToString("C2"),
                     interes.ToString("C2"),
-                    pagoCapital.ToString("C2"),
-                    saldoPendiente.ToString("C2")
+                    capital.ToString("C2"),
+                    saldo.ToString("C2")
                 );
             }
 
-            AnsiConsole.Write(tabla);
+            return tabla;
+        }
 
-            AnsiConsole.MarkupLine("\n[green]Tabla generada correctamente.[/]");
+        static void MostrarTabla(Table tabla)
+        {
+            AnsiConsole.Write(tabla);
+            AnsiConsole.MarkupLine("\n[green]Proceso completado.[/]");
         }
     }
 }
